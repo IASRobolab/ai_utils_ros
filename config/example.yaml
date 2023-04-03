@@ -1,0 +1,13 @@
+common:
+ camera_input_topic:
+ camera_output_topic:
+ objects_output_topic:
+ threshold: 
+ model_weights:
+ return_image:
+ display_image:
+ use_camera:
+ 
+
+Yolov8InferTrack:
+  reid_weights:

@@ -1,0 +1,48 @@
+#! /usr/bin/env python
+
+#from ai_utils.detectors.Yolov8Inference import Yolov8Inference
+from ai_utils.detectors.Yolov8InferTrack import Yolov8InferTrack
+
+import numpy as np
+from cv_bridge import CvBridge
+import rospy
+from sensor_msgs.msg import Image
+
+
+class RosDetector:
+
+    def __init__(self, input_camera_name, output_camera_name, model_weights, reid_weights, score_threshold) -> None:
+        self.bridge = CvBridge()
+        self.detector = Yolov8InferTrack(model_weights, reid_weights, True, False, score_threshold=score_threshold)
+
+        self.camera_sub = rospy.Subscriber(input_camera_name, Image, self.callback)
+        self.camera_pub = rospy.Publisher(output_camera_name, Image, queue_size=100)
+
+    def callback(self, data):
+        img_raw = self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8')
+        img_raw = np.array(img_raw)
+        inference, image = self.detector.img_inference(img_raw)
+
+        # Compute centroid and size
+
+        self.camera_pub.publish(self.bridge.cv2_to_imgmsg(image))
+
+
+if __name__ == '__main__':
+
+    rospy.init_node('ai_utils_ros_node', anonymous=True)
+
+    input_camera_name = rospy.get_param("~input_camera_name", "")
+    output_camera_name = rospy.get_param("~output_camera_name", "")
+    model_weights = rospy.get_param("~model_weights", "yolov8l-seg.pt")
+    reid_weights = rospy.get_param("~reid_weights", "osnet_x0_25_msmt17.pt")
+    score_threshold = rospy.get_param("~score_threshold", 0.6)
+
+    if input_camera_name == "" or output_camera_name=="":
+        rospy.logerr("input_camera_name or output_camera_name cannot be an empty string.")
+        exit(1)
+
+    detector = RosDetector(input_camera_name, output_camera_name, model_weights, reid_weights, score_threshold)
+
+    rospy.loginfo("Subscriber initialized.")
+    rospy.spin()

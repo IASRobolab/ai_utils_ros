@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<launch>
+    <arg name="input_camera_name" default=""/>
+    <arg name="output_camera_name" default=""/>
+    <arg name="weights" default="yolov8l-seg.pt"/>
+    <arg name="score_threshold" default="0.6" />
+
+    <node name="ai_utils_ros_node" pkg="ai_utils_ros" type="ai_utils_ros_node" respawn="false" output="screen" >
+        <param name="input_camera_name" value="$(arg input_camera_name)" />
+        <param name="output_camera_name" value="$(arg output_camera_name)" />
+        <param name="weights" value="$(arg weights)" />
+        <param name="score_threshold" value="$(arg score_threshold)" />
+    </node>
+
+</launch>
