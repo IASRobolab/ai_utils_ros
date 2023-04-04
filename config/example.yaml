@@ -1,13 +1,12 @@
-common:
- camera_input_topic:
- camera_output_topic:
- objects_output_topic:
- threshold: 
- model_weights:
- return_image:
- display_image:
- use_camera:
- 
+camera_input_topic: "/d435/color/image_raw"
+camera_output_topic: "/d435/color/image_inf"
+objects_output_topic: "objects"
+score_threshold: 0.6
+return_image: True
+display_image: False
+use_camera: False
+detector: "Yolov8InferTrack"
 
 Yolov8InferTrack:
-  reid_weights:
+  reid_weights: "osnet_x0_25_msmt17.pt"
+  model_weights: "yolov8l-seg.pt"
