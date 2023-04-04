@@ -1,7 +1,8 @@
 #! /usr/bin/env python
 
-from ai_utils_ros.detector_factory import DetectorFactory
+from ai_utils_ros.detector_factory import DetectorFactory, pkg_name
 from ai_utils_msgs.msg import Object, ObjectArray
+from ai_utils_msgs.srv import ComputeInference
 
 import numpy as np
 from cv_bridge import CvBridge
@@ -10,37 +11,65 @@ from sensor_msgs.msg import Image
 
 
 class RosDetector:
-    def __init__(self, detector) -> None:
+    def __init__(self, detector, image_sub_topic, image_pub_topic, objects_pub_topic, start_inference) -> None:
         self.bridge = CvBridge()
         self.detector = detector
 
-        self.camera_sub = rospy.Subscriber(camera_input_topic, Image, self.callback)
-        self.camera_pub = rospy.Publisher(camera_output_topic, Image, queue_size=100)
+        self.compute_inf_srv = rospy.Service(pkg_name+"/compute_inference", ComputeInference, self.compute_inference)
+
+        self.image_sub = rospy.Subscriber(image_sub_topic, Image, self.callback)
+        self.image_pub = rospy.Publisher(image_pub_topic, Image, queue_size=100)
+        self.objects_pub = None
+
+        if objects_pub_topic != "":
+            self.objects_pub = rospy.Publisher(objects_pub_topic, ObjectArray, queue_size=100)
+
+        self.start_inference = start_inference
+        self.objects = ObjectArray()
+
+    def compute_inference(self, req):
+        self.start_inference = req.start
+        if self.start_inference:
+            rospy.loginfo("Start computing the inference")
+        else:
+            rospy.loginfo("Stop computing the inference")
 
     def callback(self, data):
-        img_raw = self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8')
-        img_raw = np.array(img_raw)
-        inference, image = self.detector.img_inference(img_raw)
+        if self.start_inference:
+            img_raw = self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8')
+            img_raw = np.array(img_raw)
+            inference, image = self.detector.img_inference(img_raw)
 
-        # Compute centroid and size (TODO)
+            # Publish the image
+            self.image_pub.publish(self.bridge.cv2_to_imgmsg(image))
 
-        self.camera_pub.publish(self.bridge.cv2_to_imgmsg(image))
+            # Publish the objects
+            if self.objects_pub is not None:
+                # Compute centroid and size (TODO)
+                self.objects.header = data.header
+                #for key, value in inference.items():
+                #    object = Object()
+                #    object.class = key
+                #    object.score = value
+                #    self.objects.append(object)
+                self.objects_pub.publish(self.objects)
 
 
 if __name__ == '__main__':
 
-    rospy.init_node('ai_utils_ros_node', anonymous=True)
+    rospy.init_node(pkg_name+'_node', anonymous=True)
 
-    camera_input_topic = rospy.get_param("~camera_input_topic", "")
-    camera_output_topic = rospy.get_param("~camera_output_topic", "")
+    image_input_topic = rospy.get_param("~image_input_topic", "")
+    image_output_topic = rospy.get_param("~image_output_topic", "")
+    objects_output_topic = rospy.get_param("~objects_output_topic", "")
+    autostart = rospy.get_param("~autostart", False)
 
-    if camera_input_topic == "" or camera_output_topic == "":
-        rospy.logerr("camera_input_topic or camera_output_topic cannot be an empty string.")
+    if image_input_topic == "" or image_output_topic == "":
+        rospy.logerr("image_input_topic or image_output_topic cannot be an empty string.")
         exit(1)
 
-    detector = DetectorFactory().get_detector
+    ros_detector = RosDetector(DetectorFactory().get_detector, image_input_topic, image_output_topic,
+                               objects_output_topic, autostart)
 
-    ros_detector = RosDetector(detector)
-
-    rospy.loginfo("Subscriber initialized.")
+    rospy.loginfo("ai_utils_ros_node initialized.")
     rospy.spin()

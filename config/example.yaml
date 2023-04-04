@@ -1,10 +1,11 @@
-camera_input_topic: "/d435/color/image_raw"
-camera_output_topic: "/d435/color/image_inf"
+image_input_topic: "/d435/color/image_raw"
+image_output_topic: "/d435/color/image_inf"
 objects_output_topic: "objects"
 score_threshold: 0.6
 return_image: True
 display_image: False
 use_camera: False
+autostart: False
 detector: "Yolov8InferTrack"
 
 Yolov8InferTrack:
