@@ -2,7 +2,9 @@
 
 from ai_utils_ros.detector_factory import DetectorFactory, pkg_name
 from ai_utils_msgs.msg import Object, ObjectArray
-from ai_utils_msgs.srv import ComputeInference
+from ai_utils_msgs.srv import ComputeInference, ComputeInferenceResponse
+
+from camera_utils.from2Dto3D import compute_centroid_from_mask
 
 import numpy as np
 from cv_bridge import CvBridge
@@ -13,46 +15,63 @@ from sensor_msgs.msg import Image
 class RosDetector:
     def __init__(self, detector, image_sub_topic, image_pub_topic, objects_pub_topic, start_inference) -> None:
         self.bridge = CvBridge()
-        self.detector = detector
 
+        self.detector = detector
+        self.image_sub_topic = image_sub_topic
+        self.image_pub_topic = image_pub_topic
+        self.objects_pub_topic = objects_pub_topic
+        self.start_inference = start_inference
+
+        # TODO check unsbscribe
         self.compute_inf_srv = rospy.Service(pkg_name+"/compute_inference", ComputeInference, self.compute_inference)
 
-        self.image_sub = rospy.Subscriber(image_sub_topic, Image, self.callback)
-        self.image_pub = rospy.Publisher(image_pub_topic, Image, queue_size=100)
+        if self.start_inference:
+            self.image_sub = rospy.Subscriber(self.image_sub_topic, Image, self.callback)
+        else:
+            self.image_sub = None
+        self.image_pub = rospy.Publisher(self.image_pub_topic, Image, queue_size=100)
         self.objects_pub = None
 
         if objects_pub_topic != "":
             self.objects_pub = rospy.Publisher(objects_pub_topic, ObjectArray, queue_size=100)
 
-        self.start_inference = start_inference
         self.objects = ObjectArray()
 
     def compute_inference(self, req):
         self.start_inference = req.start
         if self.start_inference:
             rospy.loginfo("Start computing the inference")
+            self.image_sub = rospy.Subscriber(self.image_sub_topic, Image, self.callback)
         else:
             rospy.loginfo("Stop computing the inference")
+            self.image_sub.unregister()
+            self.image_sub = None
+        return ComputeInferenceResponse()
 
     def callback(self, data):
-        if self.start_inference:
-            img_raw = self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8')
-            img_raw = np.array(img_raw)
-            inference, image = self.detector.img_inference(img_raw)
+        img_raw = self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8')
+        img_raw = np.array(img_raw)
+        inference, image = self.detector.img_inference(img_raw)
 
-            # Publish the image
-            self.image_pub.publish(self.bridge.cv2_to_imgmsg(image))
+        # Publish the image
+        self.image_pub.publish(self.bridge.cv2_to_imgmsg(image))
 
-            # Publish the objects
-            if self.objects_pub is not None:
-                # Compute centroid and size (TODO)
-                self.objects.header = data.header
-                #for key, value in inference.items():
-                #    object = Object()
-                #    object.class = key
-                #    object.score = value
-                #    self.objects.append(object)
-                self.objects_pub.publish(self.objects)
+        self.objects.array.clear()
+
+        # Publish the objects
+        if self.objects_pub is not None:
+
+            self.objects.header = data.header
+            for class_key in inference.keys():
+                for idx in range(len((inference[class_key]['id']))):
+                    object = Object()
+                    object.class_ = class_key
+                    object.score = inference[class_key]['scores'][idx]
+                    object.id = inference[class_key]['id'][idx]
+                    object.size = [0.0, 0.0]  # TODO Compute size
+                    object.centroid = compute_centroid_from_mask(inference[class_key]['masks'][idx].astype("uint8")) # TODO talk with UAVs
+                    self.objects.array.append(object)
+            self.objects_pub.publish(self.objects)
 
 
 if __name__ == '__main__':

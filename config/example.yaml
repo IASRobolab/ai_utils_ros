@@ -5,7 +5,7 @@ score_threshold: 0.6
 return_image: True
 display_image: False
 use_camera: False
-autostart: False
+autostart: True
 detector: "Yolov8InferTrack"
 
 Yolov8InferTrack:

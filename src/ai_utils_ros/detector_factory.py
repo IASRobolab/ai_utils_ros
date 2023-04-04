@@ -1,21 +1,23 @@
-
 available_detectors = []
 pkg_name = "ai_utils_ros"
 
 try:
     from ai_utils.detectors.Yolov8InferTrack import Yolov8InferTrack
+
     available_detectors.append("Yolov8InferTrack")
 except ImportError:
     pass
 
 try:
     from ai_utils.detectors.Yolov8Inference import Yolov8Inference
+
     available_detectors.append("Yolov8Inference")
 except ImportError:
     pass
 
 import rospy
 import rospkg
+
 
 class DetectorFactory:
 
@@ -26,8 +28,8 @@ class DetectorFactory:
         display_image = rospy.get_param("~display_image", False)
 
         detector = rospy.get_param("~detector", "")
-        model_weights = rospy.get_param("~"+detector+"/model_weights", "")
-        reid_weights = rospy.get_param("~"+detector+"/reid_weights", "")
+        model_weights = rospy.get_param("~" + detector + "/model_weights", "")
+        reid_weights = rospy.get_param("~" + detector + "/reid_weights", "")
 
         # Checks
         if detector == "":
@@ -47,8 +49,8 @@ class DetectorFactory:
         rospack = rospkg.RosPack()
         pkg_path = rospack.get_path(pkg_name)
 
-        model_weights = pkg_path+"/weights/"+model_weights
-        reid_weights = pkg_path+"/weights/"+reid_weights
+        model_weights = pkg_path + "/weights/" + model_weights
+        reid_weights = pkg_path + "/weights/" + reid_weights
 
         if reid_weights == "":
             self.detector = self.detector(model_weights, return_image, display_image, score_threshold)
