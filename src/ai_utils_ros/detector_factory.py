@@ -3,18 +3,24 @@ pkg_name = "ai_utils_ros"
 
 try:
     from ai_utils.detectors.Yolov8InferTrack import Yolov8InferTrack
-
     available_detectors.append("Yolov8InferTrack")
 except ImportError:
     pass
-
 try:
     from ai_utils.detectors.Yolov8Inference import Yolov8Inference
-
     available_detectors.append("Yolov8Inference")
 except ImportError:
     pass
-
+try:
+    from ai_utils.detectors.YolactInference import YolactInference
+    available_detectors.append("YolactInference")
+except ImportError:
+    pass
+try:
+    from ai_utils.detectors.YolactEdgeInference import YolactEdgeInference
+    available_detectors.append("YolactEdgeInference")
+except ImportError:
+    pass
 import rospy
 import rospkg
 

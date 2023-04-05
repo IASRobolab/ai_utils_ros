@@ -1,3 +1,4 @@
+##### COMMON PARAMS #####
 image_input_topic: "/d435/color/image_raw"
 image_output_topic: "/d435/color/image_inf"
 objects_output_topic: "/ai_utils_ros/objects"
@@ -8,6 +9,13 @@ use_camera: False
 autostart: True
 detector: "Yolov8InferTrack"
 
+##### DETECTORS #####
 Yolov8InferTrack:
   reid_weights: "osnet_x0_25_msmt17.pt"
   model_weights: "yolov8l-seg.pt"
+
+Yolov8Inference:
+  model_weights: "yolov8l-seg.pt"
+
+YolactInference:
+  model_weights: "yolact_plus_resnet50_54_800000.pth"

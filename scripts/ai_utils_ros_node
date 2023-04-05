@@ -64,8 +64,6 @@ class RosDetector:
                     object.type = class_key
                     object.score = inference[class_key]['scores'][idx]
                     object.id = inference[class_key]['id'][idx]
-                    # object.centroid = compute_centroid_from_mask(inference[class_key]['masks'][idx].astype(
-                    # "uint8")) # TODO talk with UAVs
                     object.centroid = [(inference[class_key]['boxes'][idx][2]+inference[class_key]['boxes'][idx][0])/2,
                                        (inference[class_key]['boxes'][idx][3]+inference[class_key]['boxes'][idx][1])/2]
                     object.size = [inference[class_key]['boxes'][idx][2]-inference[class_key]['boxes'][idx][0],
