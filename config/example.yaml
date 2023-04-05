@@ -1,6 +1,6 @@
 image_input_topic: "/d435/color/image_raw"
 image_output_topic: "/d435/color/image_inf"
-objects_output_topic: "objects"
+objects_output_topic: "/ai_utils_ros/objects"
 score_threshold: 0.6
 return_image: True
 display_image: False

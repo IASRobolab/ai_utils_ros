@@ -4,8 +4,6 @@ from ai_utils_ros.detector_factory import DetectorFactory, pkg_name
 from ai_utils_msgs.msg import Object, ObjectArray
 from ai_utils_msgs.srv import ComputeInference, ComputeInferenceResponse
 
-from camera_utils.from2Dto3D import compute_centroid_from_mask
-
 import numpy as np
 from cv_bridge import CvBridge
 import rospy
@@ -22,7 +20,6 @@ class RosDetector:
         self.objects_pub_topic = objects_pub_topic
         self.start_inference = start_inference
 
-        # TODO check unsbscribe
         self.compute_inf_srv = rospy.Service(pkg_name+"/compute_inference", ComputeInference, self.compute_inference)
 
         if self.start_inference:
@@ -60,16 +57,19 @@ class RosDetector:
 
         # Publish the objects
         if self.objects_pub is not None:
-
             self.objects.header = data.header
             for class_key in inference.keys():
                 for idx in range(len((inference[class_key]['id']))):
                     object = Object()
-                    object.class_ = class_key
+                    object.type = class_key
                     object.score = inference[class_key]['scores'][idx]
                     object.id = inference[class_key]['id'][idx]
-                    object.size = [0.0, 0.0]  # TODO Compute size
-                    object.centroid = compute_centroid_from_mask(inference[class_key]['masks'][idx].astype("uint8")) # TODO talk with UAVs
+                    # object.centroid = compute_centroid_from_mask(inference[class_key]['masks'][idx].astype(
+                    # "uint8")) # TODO talk with UAVs
+                    object.centroid = [(inference[class_key]['boxes'][idx][2]+inference[class_key]['boxes'][idx][0])/2,
+                                       (inference[class_key]['boxes'][idx][3]+inference[class_key]['boxes'][idx][1])/2]
+                    object.size = [inference[class_key]['boxes'][idx][2]-inference[class_key]['boxes'][idx][0],
+                                   inference[class_key]['boxes'][idx][3]-inference[class_key]['boxes'][idx][1]]
                     self.objects.array.append(object)
             self.objects_pub.publish(self.objects)
 
