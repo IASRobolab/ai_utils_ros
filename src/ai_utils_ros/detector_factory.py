@@ -39,7 +39,7 @@ class DetectorFactory:
 
         # Checks
         if detector == "":
-            rospy.logerr("detector cannot be an empty string, available detectors are: " + available_detectors)
+            rospy.logerr("detector cannot be an empty string, available detectors are: " + ", ".join(available_detectors))
             exit(1)
         if detector in available_detectors:
             pass
