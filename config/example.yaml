@@ -10,6 +10,7 @@ display_image: False
 use_camera: False # NOTE: Use the intel camera instead of the ROS topic to get the raw image
 autostart: True
 detector: "Yolov8InferTrack"
+#classes_white_list: ["chair","person"]
 
 ##### DETECTORS #####
 
