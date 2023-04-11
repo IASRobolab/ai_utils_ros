@@ -1,15 +1,18 @@
 ##### COMMON PARAMS #####
+
 image_input_topic: "/d435/color/image_raw"
 image_output_topic: "/d435/color/image_inf"
 objects_output_topic: "/ai_utils_ros/objects"
+camera_frame_id: "" # NOTE: To be defined if use_camera is set to True
 score_threshold: 0.6
 return_image: True
 display_image: False
-use_camera: False
+use_camera: False # NOTE: Use the intel camera instead of the ROS topic to get the raw image
 autostart: True
 detector: "Yolov8InferTrack"
 
 ##### DETECTORS #####
+
 Yolov8InferTrack:
   reid_weights: "osnet_x0_25_msmt17.pt"
   model_weights: "yolov8l-seg.pt"

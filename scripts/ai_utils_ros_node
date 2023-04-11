@@ -3,73 +3,73 @@
 from ai_utils_ros.detector_factory import DetectorFactory, pkg_name
 from ai_utils_msgs.msg import Object, ObjectArray
 from ai_utils_msgs.srv import ComputeInference, ComputeInferenceResponse
+from camera_utils.cameras.IntelRealsense import IntelRealsense
 
 import numpy as np
 from cv_bridge import CvBridge
 import rospy
 from sensor_msgs.msg import Image
+from std_msgs.msg import Header
 
 
 class RosDetector:
-    def __init__(self, detector, image_sub_topic, image_pub_topic, objects_pub_topic, start_inference) -> None:
+    def __init__(self, image_pub_topic, objects_pub_topic, start_inference) -> None:
         self.bridge = CvBridge()
-
-        self.detector = detector
-        self.image_sub_topic = image_sub_topic
-        self.image_pub_topic = image_pub_topic
-        self.objects_pub_topic = objects_pub_topic
+        self.detector = DetectorFactory().get_detector
         self.start_inference = start_inference
+        self.objects = ObjectArray()
 
-        self.compute_inf_srv = rospy.Service(pkg_name+"/compute_inference", ComputeInference, self.compute_inference)
+        # ROS services
+        self.compute_inf_srv = rospy.Service(pkg_name + "/compute_inference", ComputeInference, self.compute_inference)
 
-        if self.start_inference:
-            self.image_sub = rospy.Subscriber(self.image_sub_topic, Image, self.callback)
-        else:
-            self.image_sub = None
-        self.image_pub = rospy.Publisher(self.image_pub_topic, Image, queue_size=100)
-        self.objects_pub = None
-
+        # ROS publishers
         if objects_pub_topic != "":
             self.objects_pub = rospy.Publisher(objects_pub_topic, ObjectArray, queue_size=100)
-
-        self.objects = ObjectArray()
+        else:
+            self.objects_pub = None
+        if image_pub_topic != "":
+            self.image_pub = rospy.Publisher(image_pub_topic, Image, queue_size=100)
+        else:
+            self.image_pub = None
 
     def compute_inference(self, req):
         self.start_inference = req.start
         if self.start_inference:
             rospy.loginfo("Start computing the inference")
-            self.image_sub = rospy.Subscriber(self.image_sub_topic, Image, self.callback)
         else:
             rospy.loginfo("Stop computing the inference")
-            self.image_sub.unregister()
-            self.image_sub = None
         return ComputeInferenceResponse()
 
-    def callback(self, data):
-        img_raw = self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8')
-        img_raw = np.array(img_raw)
-        inference, image = self.detector.img_inference(img_raw)
-
-        # Publish the image
-        self.image_pub.publish(self.bridge.cv2_to_imgmsg(image))
-
-        self.objects.array.clear()
-
-        # Publish the objects
-        if self.objects_pub is not None:
-            self.objects.header = data.header
+    def loop(self, image_raw, header):
+        if self.start_inference:
+            inference, image_inf = self.detector.img_inference(image_raw)
+            self.objects.array.clear()
+            self.objects.header = header
+            # Extract objects
             for class_key in inference.keys():
                 for idx in range(len((inference[class_key]['id']))):
                     object = Object()
                     object.type = class_key
                     object.score = inference[class_key]['scores'][idx]
                     object.id = inference[class_key]['id'][idx]
-                    object.centroid = [(inference[class_key]['boxes'][idx][2]+inference[class_key]['boxes'][idx][0])/2,
-                                       (inference[class_key]['boxes'][idx][3]+inference[class_key]['boxes'][idx][1])/2]
-                    object.size = [inference[class_key]['boxes'][idx][2]-inference[class_key]['boxes'][idx][0],
-                                   inference[class_key]['boxes'][idx][3]-inference[class_key]['boxes'][idx][1]]
+                    object.centroid = [
+                        (inference[class_key]['boxes'][idx][2] + inference[class_key]['boxes'][idx][0]) / 2,
+                        (inference[class_key]['boxes'][idx][3] + inference[class_key]['boxes'][idx][1]) / 2]
+                    object.size = [inference[class_key]['boxes'][idx][2] - inference[class_key]['boxes'][idx][0],
+                                   inference[class_key]['boxes'][idx][3] - inference[class_key]['boxes'][idx][1]]
                     self.objects.array.append(object)
-            self.objects_pub.publish(self.objects)
+            # Publish the objects
+            if self.objects_pub is not None:
+                self.objects_pub.publish(self.objects)
+            # Publish the image
+            if self.image_pub is not None:
+                self.image_pub.publish(self.bridge.cv2_to_imgmsg(image_inf))
+
+    def image_topic_callback(self, data):
+        image_raw = self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8')
+        image_raw = np.array(image_raw)
+        header = data.header
+        self.loop(image_raw, header)
 
 
 if __name__ == '__main__':
@@ -80,13 +80,36 @@ if __name__ == '__main__':
     image_output_topic = rospy.get_param("~image_output_topic", "")
     objects_output_topic = rospy.get_param("~objects_output_topic", "")
     autostart = rospy.get_param("~autostart", False)
+    use_camera = rospy.get_param("~use_camera", False)
+    camera_frame_id = rospy.get_param("~camera_frame_id", "")
 
-    if image_input_topic == "" or image_output_topic == "":
-        rospy.logerr("image_input_topic or image_output_topic cannot be an empty string.")
+    if image_output_topic == "":
+        rospy.logerr("image_output_topic cannot be an empty string.")
         exit(1)
 
-    ros_detector = RosDetector(DetectorFactory().get_detector, image_input_topic, image_output_topic,
-                               objects_output_topic, autostart)
+    if use_camera is False and image_input_topic == "":
+        rospy.logerr("image_input_topic cannot be an empty string if use_camera is set to False.")
+        exit(1)
+
+    if use_camera is True and camera_frame_id == "":
+        rospy.logwarn("camera_frame_id is empty and use_camera is set to True, "
+                      "the frame_id field in the image topic will be empty.")
+
+    ros_detector = RosDetector(image_output_topic, objects_output_topic, autostart)
 
     rospy.loginfo("ai_utils_ros_node initialized.")
-    rospy.spin()
+
+    if use_camera is True:
+        camera = IntelRealsense(IntelRealsense.Resolution.LOW)
+        while not rospy.is_shutdown():
+            image_raw = camera.get_rgb()
+            header = Header()
+            header.stamp = rospy.get_rostime()
+            header.frame_id = camera_frame_id
+            ros_detector.loop(image_raw, header)
+    else:
+        # Start the subscriber
+        image_sub = rospy.Subscriber(image_input_topic, Image, ros_detector.image_topic_callback)
+        rospy.spin()
+
+

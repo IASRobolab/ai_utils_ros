@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(ai_utils_ros)
 
-find_package(catkin REQUIRED rospy sensor_msgs cv_bridge)
+find_package(catkin REQUIRED rospy std_msgs sensor_msgs cv_bridge)
 
 catkin_python_setup()
 
