@@ -56,12 +56,14 @@ class DetectorFactory:
         pkg_path = rospack.get_path(pkg_name)
 
         model_weights = pkg_path + "/weights/" + model_weights
-        reid_weights = pkg_path + "/weights/" + reid_weights
 
         if reid_weights == "":
-            self.detector = self.detector(model_weights, return_image, display_image, score_threshold)
+            self.detector = self.detector(model_weights=model_weights, return_img=return_image,
+                                          display_img=display_image, score_threshold=score_threshold)
         else:
-            self.detector = self.detector(model_weights, reid_weights, return_image, display_image, score_threshold)
+            reid_weights = pkg_path + "/weights/" + reid_weights
+            self.detector = self.detector(model_weights=model_weights, reid_weights=reid_weights,
+                                          return_img=return_image, display_img=display_image, score_threshold=score_threshold)
 
     @property
     def get_detector(self):

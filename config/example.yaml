@@ -22,3 +22,6 @@ Yolov8Inference:
 
 YolactInference:
   model_weights: "yolact_plus_resnet50_54_800000.pth"
+
+YolactInference:
+  model_weights: "yolact_plus_resnet50_54_800000.pth"
