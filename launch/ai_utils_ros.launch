@@ -1,8 +1,17 @@
 <?xml version="1.0" ?>
 <launch>
-    <arg name="config" default="$(find ai_utils_ros)/config/example.yaml"/>
+    <arg name="namespace" default=""/>
+    <arg name="config"    default="$(find ai_utils_ros)/config/example.yaml"/>
 
-    <node name="ai_utils_ros_node" pkg="ai_utils_ros" type="ai_utils_ros_node" respawn="false" output="screen">
-        <rosparam file="$(arg config)" command="load" subst_value="true"/>
-    </node>
+    <group if="$(eval namespace != '')">
+        <node name="ai_utils_ros_node" pkg="ai_utils_ros" type="ai_utils_ros_node" respawn="false" output="screen" ns="$(arg namespace)">
+            <rosparam file="$(arg config)" command="load" subst_value="true"/>
+        </node>
+    </group>
+    <group if="$(eval namespace == '')">
+        <node name="ai_utils_ros_node" pkg="ai_utils_ros" type="ai_utils_ros_node" respawn="false" output="screen">
+            <rosparam file="$(arg config)" command="load" subst_value="true"/>
+        </node>
+    </group>
+
 </launch>
