@@ -5,7 +5,7 @@ find_package(catkin REQUIRED rospy std_msgs sensor_msgs cv_bridge)
 
 catkin_python_setup()
 
-catkin_package()
+catkin_package(DEPENDS rospy sensor_msgs sensor_msgs cv_bridge)
 
 install(DIRECTORY launch/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
